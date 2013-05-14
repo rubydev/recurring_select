@@ -38,20 +38,20 @@ window.RecurringSelectDialog =
       dialog_height = @content.outerHeight()
       if dialog_height < 80
         dialog_height = 80
-      margin_top = (window_height - dialog_height)/2 - 30
+      margin_top = (window_height - dialog_height) / 2 - 30
       margin_top = 10 if margin_top < 10
       # if dialog_height > window_height - 20
       #   dialog_height = window_height - 20
 
       new_style_hash =
-        "margin-top" : margin_top+"px"
-        "min-height" : dialog_height+"px"
+        "margin-top": margin_top + "px"
+        "min-height": dialog_height + "px"
 
       if initial_positioning?
         @inner_holder.css new_style_hash
         @inner_holder.trigger "recurring_select:dialog_positioned"
       else
-        @content.css {"width": @content.width()+"px"}
+        @content.css {"width": @content.width() + "px"}
         @inner_holder.addClass "animated"
         @inner_holder.animate new_style_hash, 200, =>
           @inner_holder.removeClass "animated"
@@ -114,7 +114,7 @@ window.RecurringSelectDialog =
       # connect the day fields
       if @current_rule.hash.validations? && @current_rule.hash.validations.day?
         $(@current_rule.hash.validations.day).each (index, val) ->
-          section.find(".day_holder a[data-value='"+val+"']").addClass("selected")
+          section.find(".day_holder a[data-value='" + val + "']").addClass("selected")
       section.on "click", ".day_holder a", @daysChanged
 
       section.show()
@@ -139,10 +139,23 @@ window.RecurringSelectDialog =
       section.show()
 
     initYearlyOptions: ->
+      @current_rule.hash.validations ||= {}
+      @current_rule.hash.validations.month_of_year ||= []
+      @current_rule.hash.validations.day_of_month ||= []
+      @current_rule.hash.validations.day_of_week ||= {}
       section = @content.find('.yearly_options')
+      select_month_input = section.find('#rs_in_month')
       interval_input = section.find('.rs_yearly_interval')
       interval_input.val(@current_rule.hash.interval)
       interval_input.on "change keyup", @intervalChanged
+      $('<option>').val("").text(" --- ").appendTo(select_month_input);
+      for mon in [1..12]
+        $('<option>').val(mon).text(mon).appendTo(select_month_input);
+        if $.inArray(mon, @current_rule.hash.validations.month_of_year) != -1
+          select_month_input.val(mon)
+      @init_calendar_days(section)
+      @toggle_month_view_in_year()
+      select_month_input.on "change", @toggle_month_view_in_year
       section.show()
 
 
@@ -159,7 +172,7 @@ window.RecurringSelectDialog =
         @save_button.removeClass("disabled")
         rule_str = @current_rule.str.replace("*", "")
         if rule_str.length < 20
-          rule_str = "Summary: "+rule_str
+          rule_str = "Summary: " + rule_str
         @summary.find("span").html rule_str
       else
         @summary.addClass "fetching"
@@ -169,7 +182,7 @@ window.RecurringSelectDialog =
 
     summaryFetch: ->
       return if !(@current_rule.hash? && (rule_type = @current_rule.hash.rule_type)?)
-      @content.css {"width": @content.width()+"px"}
+      @content.css {"width": @content.width() + "px"}
       $.ajax
         url: "/recurring_select/translate",
         type: "POST",
@@ -195,7 +208,7 @@ window.RecurringSelectDialog =
       if $.inArray(-1, @current_rule.hash.validations.day_of_month) != -1
         end_of_month_link.addClass("selected")
 
-      monthly_calendar.find("a").on "click tap", @dateOfMonthChanged
+      monthly_calendar.find("a").on "click tap", { section: section }, @dateOfMonthChanged
 
     init_calendar_weeks: (section) =>
       monthly_calendar = section.find(".rs_calendar_week")
@@ -215,6 +228,11 @@ window.RecurringSelectDialog =
           section.find("a[day='#{key}'][instance='#{instance}']").addClass("selected")
       monthly_calendar.find("a").on "click tap", @weekOfMonthChanged
 
+    toggle_month_view_in_year: =>
+      month = @content.find("#rs_in_month option:selected").first().val() != ""
+      @content.find(".yearly_options").find(".rs_calendar_day").toggle(month)
+      @monthOfYearChanged()
+
     toggle_month_view: =>
       week_mode = @content.find(".monthly_rule_type_week").prop("checked")
       @content.find(".rs_calendar_week").toggle(week_mode)
@@ -223,7 +241,8 @@ window.RecurringSelectDialog =
 # ========================= Change callbacks ===============================
 
     freqChanged: =>
-      @current_rule.hash = null unless $.isPlainObject(@current_rule.hash) # for custom values
+      @current_rule.hash = null unless $.isPlainObject(@current_rule.hash)
+      # for custom values
 
       @current_rule.hash ||= {}
       @current_rule.hash.interval = 1
@@ -258,7 +277,7 @@ window.RecurringSelectDialog =
       @current_rule.hash.interval = parseInt($(event.currentTarget).val())
       if @current_rule.hash.interval < 1 || isNaN(@current_rule.hash.interval)
         @current_rule.hash.interval = 1
-        # $(event.currentTarget).val(@current_rule.hash.interval)
+      # $(event.currentTarget).val(@current_rule.hash.interval)
       @summaryUpdate()
 
     daysChanged: (event) =>
@@ -266,7 +285,8 @@ window.RecurringSelectDialog =
       @current_rule.str = null
       @current_rule.hash ||= {}
       @current_rule.hash.validations = {}
-      raw_days = @content.find(".day_holder a.selected").map -> parseInt($(this).data("value"))
+      raw_days = @content.find(".day_holder a.selected").map ->
+        parseInt($(this).data("value"))
       @current_rule.hash.validations.day = raw_days.get()
       @summaryUpdate()
       false # this prevents default and propogation
@@ -275,12 +295,24 @@ window.RecurringSelectDialog =
       $(event.currentTarget).toggleClass("selected")
       @current_rule.str = null
       @current_rule.hash ||= {}
-      @current_rule.hash.validations = {}
-      raw_days = @content.find(".monthly_options .rs_calendar_day a.selected").map ->
+      @current_rule.hash.validations ||= {}
+      #TODO: Fetch also month of year!
+      raw_days = event.data.section.find(".rs_calendar_day a.selected").map ->
         res = if $(this).text() == "Last Day" then -1 else parseInt($(this).text())
         res
       @current_rule.hash.validations.day_of_week = {}
       @current_rule.hash.validations.day_of_month = raw_days.get()
+      @summaryUpdate()
+      false
+
+    monthOfYearChanged: (event) =>
+      @current_rule.str = null
+      @current_rule.hash ||= {}
+      @current_rule.hash.validations ||= {}
+      @current_rule.hash.validations.month_of_year = []
+      raw_months = @content.find(".yearly_options .rs_in_month :selected").map ->
+        month = if $(this).val() == "" then null else parseInt($(this).val())
+      @current_rule.hash.validations.month_of_year = raw_months.get()
       @summaryUpdate()
       false
 
