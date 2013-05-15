@@ -60,12 +60,18 @@
           <input type='text' name='rs_yearly_interval' class='rs_yearly_interval rs_interval' value='1' size='2' />
           year(s)
         </p>
-        <p>
-          <label for='rs_in_month'>In month:</label>
+        <p class="yearly_rule_type">
+          <span>Months of Year <input type="radio" class="yearly_rule_type_months" name="yearly_rule_type" value="true" /></span>
+          <span>Days of Month <input type="radio" class="yearly_rule_type_days" name="yearly_rule_type" value="true" /></span>
+        </p>
+        <div class="rs_days_in_month">
+          <label for='rs_in_month'></label>
           <select id='rs_in_month' class='rs_in_month' name='rs_in_month'>
           </select>
-        </p>
-        <p class="rs_calendar_day"></p>
+
+          <div class="rs_calendar_day"></div>
+        </div>
+        <p class="rs_months_in_year"></p>
       </div>
 
 
